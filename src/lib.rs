@@ -5,12 +5,16 @@ use winit::{
 };
 
 pub fn run() {
+    // defining event loop and window
     let event_loop = EventLoop::new().unwrap();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
+    // setting control flow
     event_loop.set_control_flow(ControlFlow::Wait);
 
+    // looping the window
     event_loop.run(move |event, elwt| {
+        // handling all events
         match event {
             Event::WindowEvent { 
                 event: WindowEvent::CloseRequested,
