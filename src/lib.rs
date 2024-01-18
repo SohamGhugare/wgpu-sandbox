@@ -16,6 +16,7 @@ pub fn run() {
     event_loop.run(move |event, elwt| {
         // handling all events
         match event {
+            // close window
             Event::WindowEvent { 
                 event: WindowEvent::CloseRequested,
                 ..
@@ -23,6 +24,7 @@ pub fn run() {
                 println!("Close button was pressed; stopping...");
                 elwt.exit();
              },
+             // waiting for new events
             Event::AboutToWait => {
                 window.request_redraw();
             }
