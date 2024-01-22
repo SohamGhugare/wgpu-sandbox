@@ -1,1 +1,4 @@
 /target
+/pkg
+dist
+.parcel-cache
