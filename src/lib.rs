@@ -4,13 +4,13 @@ pub mod state;
 use wasm_bindgen::prelude::*;
 
 use winit::{
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    event::{ElementState, Event, KeyEvent, WindowEvent}, event_loop::{ControlFlow, EventLoop}, keyboard::{KeyCode, PhysicalKey}, window::WindowBuilder
 };
 
+use crate::state::State;
+
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
-pub fn run() {
+pub async fn run() {
 
     // toggling logger for wasm32
     cfg_if::cfg_if! {
@@ -49,29 +49,28 @@ pub fn run() {
             .expect("Couldn't append canvas to document body.");
     }
 
+    let mut state = State::new(window).await;
+
     // looping the window
     event_loop.run(move |event, elwt| {
         // handling all events
         match event {
-            // close window
             Event::WindowEvent { 
-                event: WindowEvent::CloseRequested,
-                ..
-             } => {
-                println!("Close button was pressed; stopping...");
-                elwt.exit();
-             },
-             // waiting for new events
-            Event::AboutToWait => {
-                window.request_redraw();
-            }
-            Event::WindowEvent { 
-                event: WindowEvent::RedrawRequested, 
-                .. 
-            } => {
-
+                window_id, 
+                ref event
+            } if window_id == state.window().id() => match event {
+                WindowEvent::CloseRequested
+                | WindowEvent::KeyboardInput { 
+                    event: KeyEvent {
+                        physical_key: PhysicalKey::Code(KeyCode::Escape),
+                        state: ElementState::Pressed,
+                        ..
+                    },
+                    ..
+                 } => elwt.exit(),
+                 _ => {}
             },
-            _ => ()
+            _ => {}
         }
     }).unwrap();
 }
