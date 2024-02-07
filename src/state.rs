@@ -1,6 +1,6 @@
 use winit::{event::WindowEvent, window::Window};
 
-struct State {
+pub struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -12,7 +12,7 @@ struct State {
 }
 
 impl State {
-    async fn new(window: Window) -> Self {
+    pub async fn new(window: Window) -> Self {
         let size = window.inner_size();
 
         // instance to handle our gpu
