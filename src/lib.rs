@@ -1,7 +1,5 @@
 pub mod state;
 
-use std::ops::MulAssign;
-
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -92,6 +90,19 @@ pub async fn run() {
                                     );
                                 state.resize(new_inner_size);
                             }
+                            // redraw requested event
+                            WindowEvent::RedrawRequested => {
+                                state.update();
+                                match state.render() {
+                                    Ok(_) => {}
+                                    // reconfigure the surface if lost
+                                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                                    // system is out of memory, quit
+                                    Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
+                                    Err(e) => eprintln!("{:?}", e),
+                                }
+                            }
+
                             _ => {}
                         }
                     }
