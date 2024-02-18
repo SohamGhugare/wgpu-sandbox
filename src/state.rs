@@ -96,13 +96,12 @@ impl State {
         }
     }
 
-    fn input(&mut self, event: &WindowEvent) -> bool {
-        todo!()
+    // not capturing any events so return false
+    pub fn input(&mut self, event: &WindowEvent) -> bool {
+        false
     }
 
-    fn update(&mut self) {
-        todo!()
-    }
+    fn update(&mut self) {}
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         todo!()

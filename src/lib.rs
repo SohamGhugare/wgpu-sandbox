@@ -64,33 +64,38 @@ pub async fn run() {
                 Event::WindowEvent {
                     window_id,
                     ref event,
-                } if window_id == state.window().id() => match event {
-                    // close event
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        event:
-                            KeyEvent {
-                                physical_key: PhysicalKey::Code(KeyCode::Escape),
-                                state: ElementState::Pressed,
+                } if window_id == state.window().id() => {
+                    if !state.input(event) {
+                        match event {
+                            // close event
+                            WindowEvent::CloseRequested
+                            | WindowEvent::KeyboardInput {
+                                event:
+                                    KeyEvent {
+                                        physical_key: PhysicalKey::Code(KeyCode::Escape),
+                                        state: ElementState::Pressed,
+                                        ..
+                                    },
                                 ..
-                            },
-                        ..
-                    } => elwt.exit(),
-                    // resize event
-                    WindowEvent::Resized(physical_size) => {
-                        state.resize(*physical_size);
+                            } => elwt.exit(),
+                            // resize event
+                            WindowEvent::Resized(physical_size) => {
+                                state.resize(*physical_size);
+                            }
+                            // scale factor changed (related to dpi changes)
+                            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                                let current_inner_size = state.window().inner_size();
+                                let new_inner_size: winit::dpi::PhysicalSize<u32> =
+                                    PhysicalSize::new(
+                                        current_inner_size.width * *scale_factor as u32,
+                                        current_inner_size.height * *scale_factor as u32,
+                                    );
+                                state.resize(new_inner_size);
+                            }
+                            _ => {}
+                        }
                     }
-                    // scale factor changed (related to dpi changes)
-                    WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                        let current_inner_size = state.window().inner_size();
-                        let new_inner_size: winit::dpi::PhysicalSize<u32> = PhysicalSize::new(
-                            current_inner_size.width * *scale_factor as u32,
-                            current_inner_size.height * *scale_factor as u32,
-                        );
-                        state.resize(new_inner_size);
-                    }
-                    _ => {}
-                },
+                }
                 _ => {}
             }
         })
