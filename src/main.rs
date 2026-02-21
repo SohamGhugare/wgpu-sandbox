@@ -1,13 +1,15 @@
 use std::{default, sync::Arc};
 
-use wgpu::{Device, Instance, InstanceDescriptor, Queue, RequestAdapterOptionsBase, wgt::DeviceDescriptor};
-use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::WindowEvent, event_loop::{ActiveEventLoop, ControlFlow, EventLoop}, window::{Window, WindowId}};
+use wgpu::{Color, CompositeAlphaMode, Device, Instance, InstanceDescriptor, Operations, PresentMode, Queue, RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptionsBase, Surface, SurfaceConfiguration, TextureFormat, TextureUsages, wgt::{DeviceDescriptor, TextureViewDescriptor}};
+use winit::{application::ApplicationHandler, dpi::PhysicalSize, event::WindowEvent, event_loop::{ActiveEventLoop, ControlFlow, EventLoop, OwnedDisplayHandle}, window::{Window, WindowId}};
 
 struct State {
     window: Arc<Window>,
     device: Device,
     queue: Queue,
-    size: PhysicalSize<u32>
+    size: PhysicalSize<u32>,
+    surface: Surface<'static>,
+    surface_format: TextureFormat
 }
 
 impl State {
@@ -26,16 +28,42 @@ impl State {
 
         let size = window.inner_size();
 
-        State {
+        let surface = instance.create_surface(window.clone()).unwrap();
+        let cap = surface.get_capabilities(&adapter);
+        let surface_format = cap.formats[0];
+
+        let state = State {
             window,
             device,
             queue,
-            size
-        }
+            size,
+            surface,
+            surface_format
+        };
+
+        // Configure the surface for the first time
+        state.configure_surface();
+
+        state
     }
 
     fn get_window(&self) -> &Window {
         &self.window
+    }
+
+    fn configure_surface(&self) {
+        let surface_config = SurfaceConfiguration {
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            format: self.surface_format,
+            width: self.size.width,
+            height: self.size.height,
+            present_mode: PresentMode::AutoVsync,
+            desired_maximum_frame_latency: 2,
+            alpha_mode: CompositeAlphaMode::Auto,
+            view_formats: vec![self.surface_format.add_srgb_suffix()],
+        };
+
+        self.surface.configure(&self.device, &surface_config);
     }
 
     fn resize(&mut self, new_size: PhysicalSize<u32>) {
@@ -43,7 +71,46 @@ impl State {
     }
 
     fn render(&mut self) {
+        // Create texture view
+        let surface_texture = self
+            .surface.get_current_texture()
+            .expect("Failed to acquire next swapchain texture");
 
+        let texture_view = surface_texture
+            .texture
+            .create_view(&TextureViewDescriptor {
+                format: Some(self.surface_format.add_srgb_suffix()),
+                ..Default::default()
+            });
+
+        // Renders a Green screen
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        // Create the renderpass that will clear the screen
+        let renderpass = encoder.begin_render_pass(&RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: &texture_view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: Operations {
+                    load: wgpu::LoadOp::Clear(Color::WHITE),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+        });
+
+        // Drawing commands go here
+
+        // End the renderpass
+        drop(renderpass);
+
+        // Submit the command in the queue to execute
+        self.queue.submit([encoder.finish()]);
+        self.window.pre_present_notify();
+        surface_texture.present();
     }
 }
 
