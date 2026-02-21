@@ -1,18 +1,17 @@
-use std::{borrow::Cow, default, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use wgpu::{
-    Adapter, Color, CommandEncoderDescriptor, CompositeAlphaMode, Device, FragmentState, Instance,
-    InstanceDescriptor, MultisampleState, Operations, PipelineLayoutDescriptor, PresentMode,
-    PrimitiveState, Queue, RenderPassColorAttachment, RenderPassDescriptor,
-    RenderPipelineDescriptor, RequestAdapterOptionsBase, ShaderModule, ShaderModuleDescriptor,
-    Surface, SurfaceConfiguration, TextureFormat, TextureUsages, TextureViewDescriptor,
-    VertexState, wgt::DeviceDescriptor,
+    Adapter, Color, CommandEncoderDescriptor, Device, FragmentState, Instance, InstanceDescriptor,
+    MultisampleState, Operations, PipelineLayoutDescriptor, PrimitiveState, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor,
+    RequestAdapterOptionsBase, ShaderModuleDescriptor, Surface, TextureFormat,
+    TextureViewDescriptor, VertexState, wgt::DeviceDescriptor,
 };
 use winit::{
     application::ApplicationHandler,
     dpi::PhysicalSize,
     event::WindowEvent,
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop, OwnedDisplayHandle},
+    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     window::{Window, WindowId},
 };
 
@@ -89,7 +88,8 @@ impl State {
         self.size = new_size;
     }
 
-    fn render(&mut self) {
+    // Renders a blank screen
+    fn _render_blank(&mut self) {
         // Create texture view
         let surface_texture = self
             .surface
@@ -241,7 +241,7 @@ impl ApplicationHandler for App {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
-                // state.render();
+                // state.render_blank();
                 state.render_triangle();
                 // Emits a new redraw requested event.
                 state.get_window().request_redraw();
