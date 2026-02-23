@@ -24,6 +24,9 @@ struct Cli {
 
     #[arg(long, default_value_t = 0.5)]
     size: f32,
+
+    #[arg(long, num_args = 2, value_names = ["X", "Y"])]
+    pos: Option<Vec<f32>>,
 }
 
 fn parse_color(s: &str) -> [f32; 4] {
@@ -100,6 +103,7 @@ fn main() {
         shape: cli.shape,
         color: parse_color(&cli.color),
         size: cli.size,
+        position: cli.pos.map(|p| [p[0], p[1]]).unwrap_or([0.0, 0.0]),
     };
 
     let event_loop = EventLoop::new().unwrap();

@@ -11,6 +11,7 @@ pub struct ShapeConfig {
     pub shape: Shape,
     pub color: [f32; 4],
     pub size: f32,
+    pub position: [f32; 2],
 }
 
 impl ShapeConfig {

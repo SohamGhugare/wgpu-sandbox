@@ -25,6 +25,8 @@ pub struct State {
     color_bind_group: BindGroup,
     aspect_buffer: Buffer,
     vertex_count: u32,
+    // position_buffer is kept alive for the bind group; not written after init
+    _position_buffer: Buffer,
 }
 
 impl State {
@@ -71,6 +73,14 @@ impl State {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        // --- Position uniform (vec4, only .x and .y used) ---
+        let pos_data: [f32; 4] = [config.position[0], config.position[1], 0.0, 0.0];
+        let position_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: bytemuck::cast_slice(&pos_data),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+
         let uniform_entry = |binding: u32, visibility: wgpu::ShaderStages| wgpu::BindGroupLayoutEntry {
             binding,
             visibility,
@@ -87,6 +97,7 @@ impl State {
             entries: &[
                 uniform_entry(0, wgpu::ShaderStages::FRAGMENT),
                 uniform_entry(1, wgpu::ShaderStages::VERTEX),
+                uniform_entry(2, wgpu::ShaderStages::VERTEX),
             ],
         });
 
@@ -96,6 +107,7 @@ impl State {
             entries: &[
                 wgpu::BindGroupEntry { binding: 0, resource: color_buffer.as_entire_binding() },
                 wgpu::BindGroupEntry { binding: 1, resource: aspect_buffer.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: position_buffer.as_entire_binding() },
             ],
         });
 
@@ -154,6 +166,7 @@ impl State {
             color_bind_group,
             aspect_buffer,
             vertex_count,
+            _position_buffer: position_buffer,
         };
 
         state.configure_surface();
