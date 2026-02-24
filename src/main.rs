@@ -1,3 +1,4 @@
+mod axis;
 mod shape;
 mod state;
 
@@ -22,11 +23,20 @@ struct Cli {
     #[arg(long, default_value = "red")]
     color: String,
 
-    #[arg(long, default_value_t = 0.5)]
-    size: f32,
+    /// Size of the shape (default 0.5) or arm length of axes (default 1.0)
+    #[arg(long)]
+    size: Option<f32>,
 
     #[arg(long, num_args = 2, value_names = ["X", "Y"])]
     pos: Option<Vec<f32>>,
+
+    /// Draw X/Y axes with tick marks
+    #[arg(long)]
+    axis: bool,
+
+    /// Draw X/Y axes with a full grid
+    #[arg(long = "axis-grid")]
+    axis_grid: bool,
 }
 
 fn parse_color(s: &str) -> [f32; 4] {
@@ -102,8 +112,11 @@ fn main() {
     let config = ShapeConfig {
         shape: cli.shape,
         color: parse_color(&cli.color),
-        size: cli.size,
+        size: cli.size.unwrap_or(0.5),
         position: cli.pos.map(|p| [p[0], p[1]]).unwrap_or([0.0, 0.0]),
+        axis: cli.axis,
+        axis_grid: cli.axis_grid,
+        axis_arm_len: cli.size.unwrap_or(1.0),
     };
 
     let event_loop = EventLoop::new().unwrap();

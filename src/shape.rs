@@ -12,6 +12,9 @@ pub struct ShapeConfig {
     pub color: [f32; 4],
     pub size: f32,
     pub position: [f32; 2],
+    pub axis: bool,
+    pub axis_grid: bool,
+    pub axis_arm_len: f32,
 }
 
 impl ShapeConfig {
