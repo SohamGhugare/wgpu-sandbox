@@ -20,13 +20,17 @@ pub struct State {
     size: PhysicalSize<u32>,
     surface: Surface<'static>,
     surface_format: TextureFormat,
+    // Shape pipeline
     render_pipeline: RenderPipeline,
     vertex_buffer: Buffer,
     color_bind_group: BindGroup,
     aspect_buffer: Buffer,
     vertex_count: u32,
-    // position_buffer is kept alive for the bind group; not written after init
     _position_buffer: Buffer,
+    // Axis/grid pipeline (optional)
+    axis_pipeline: Option<RenderPipeline>,
+    axis_vertex_buffer: Option<Buffer>,
+    axis_vertex_count: u32,
 }
 
 impl State {
@@ -48,7 +52,7 @@ impl State {
         let cap = surface.get_capabilities(&adapter);
         let surface_format = cap.formats[0];
 
-        // --- Vertex buffer ---
+        // --- Shape vertex buffer ---
         let vertices = config.vertices();
         let vertex_count = vertices.len() as u32;
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -111,7 +115,7 @@ impl State {
             ],
         });
 
-        // --- Shader & pipeline ---
+        // --- Shape shader & pipeline ---
         let shader = device.create_shader_module(ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(include_str!("shape_shader.wgsl").into()),
@@ -153,6 +157,72 @@ impl State {
             cache: None,
         });
 
+        // --- Axis/grid pipeline (optional) ---
+        let (axis_pipeline, axis_vertex_buffer, axis_vertex_count) =
+            if config.axis || config.axis_grid {
+                let axis_verts = crate::axis::generate_vertices(config.axis_arm_len, config.axis_grid, aspect);
+                let axis_vertex_count = axis_verts.len() as u32;
+
+                let axis_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: bytemuck::cast_slice(&axis_verts),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+
+                let axis_shader = device.create_shader_module(ShaderModuleDescriptor {
+                    label: None,
+                    source: wgpu::ShaderSource::Wgsl(include_str!("axis_shader.wgsl").into()),
+                });
+
+                let axis_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+                    label: None,
+                    bind_group_layouts: &[],
+                    push_constant_ranges: &[],
+                });
+
+                // Vertex layout: [x, y, r, g, b, a] — stride 24 bytes
+                let axis_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+                    label: None,
+                    layout: Some(&axis_pipeline_layout),
+                    vertex: VertexState {
+                        module: &axis_shader,
+                        entry_point: Some("vs_main"),
+                        compilation_options: Default::default(),
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: 24,
+                            step_mode: wgpu::VertexStepMode::Vertex,
+                            attributes: &[
+                                wgpu::VertexAttribute {
+                                    offset: 0,
+                                    shader_location: 0,
+                                    format: wgpu::VertexFormat::Float32x2,
+                                },
+                                wgpu::VertexAttribute {
+                                    offset: 8,
+                                    shader_location: 1,
+                                    format: wgpu::VertexFormat::Float32x4,
+                                },
+                            ],
+                        }],
+                    },
+                    primitive: PrimitiveState::default(), // TriangleList
+                    depth_stencil: None,
+                    multisample: MultisampleState::default(),
+                    fragment: Some(FragmentState {
+                        module: &axis_shader,
+                        entry_point: Some("fs_main"),
+                        compilation_options: Default::default(),
+                        targets: &[Some(surface_format.into())],
+                    }),
+                    multiview: None,
+                    cache: None,
+                });
+
+                (Some(axis_pipeline), Some(axis_vertex_buffer), axis_vertex_count)
+            } else {
+                (None, None, 0)
+            };
+
         let state = State {
             window,
             adapter,
@@ -167,6 +237,9 @@ impl State {
             aspect_buffer,
             vertex_count,
             _position_buffer: position_buffer,
+            axis_pipeline,
+            axis_vertex_buffer,
+            axis_vertex_count,
         };
 
         state.configure_surface();
@@ -222,6 +295,14 @@ impl State {
                 occlusion_query_set: None,
             });
 
+            // Draw axes/grid first so the shape renders on top
+            if let (Some(pipeline), Some(buffer)) = (&self.axis_pipeline, &self.axis_vertex_buffer) {
+                rpass.set_pipeline(pipeline);
+                rpass.set_vertex_buffer(0, buffer.slice(..));
+                rpass.draw(0..self.axis_vertex_count, 0..1);
+            }
+
+            // Draw shape
             rpass.set_pipeline(&self.render_pipeline);
             rpass.set_bind_group(0, &self.color_bind_group, &[]);
             rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
